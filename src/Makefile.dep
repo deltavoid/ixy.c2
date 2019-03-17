@@ -1,0 +1,13 @@
+device.o: driver/device.c driver/device.h log.h memory.h driver/ixgbe.h \
+ stats.h driver/device.h driver/virtio.h pci.h
+ixgbe.o: driver/ixgbe.c log.h driver/ixgbe.h stats.h driver/device.h \
+ memory.h pci.h driver/ixgbe_type.h driver/device.h driver/ixgbe_type.h
+virtio.o: driver/virtio.c driver/device.h log.h memory.h pci.h \
+ driver/virtio.h stats.h driver/device.h driver/virtio_type.h
+memory.o: memory.c memory.h log.h
+pci.o: pci.c pci.h log.h
+stats.o: stats.c stats.h driver/device.h log.h memory.h
+ixy-pktgen.o: app/ixy-pktgen.c stats.h driver/device.h log.h memory.h \
+ driver/device.h
+ixy-fwd.o: app/ixy-fwd.c stats.h driver/device.h log.h memory.h \
+ driver/device.h
