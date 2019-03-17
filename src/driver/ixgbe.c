@@ -10,13 +10,18 @@
 #include "driver/device.h"
 #include "ixgbe_type.h"
 
+const char* virt_pci_addr = "0000";
 const char* driver_name = "ixy-ixgbe";
 
-const int MAX_RX_QUEUE_ENTRIES = 4096;
-const int MAX_TX_QUEUE_ENTRIES = 4096;
+// const int MAX_RX_QUEUE_ENTRIES = 4096;
+// const int MAX_TX_QUEUE_ENTRIES = 4096;
+const int MAX_RX_QUEUE_ENTRIES = 2048;
+const int MAX_TX_QUEUE_ENTRIES = 2048;
 
-const int NUM_RX_QUEUE_ENTRIES = 512;
-const int NUM_TX_QUEUE_ENTRIES = 512;
+// const int NUM_RX_QUEUE_ENTRIES = 512;
+// const int NUM_TX_QUEUE_ENTRIES = 512;
+const int NUM_RX_QUEUE_ENTRIES = 256;
+const int NUM_TX_QUEUE_ENTRIES = 256;
 
 const int TX_CLEAN_BATCH = 32;
 
@@ -63,10 +68,17 @@ static void start_rx_queue(struct ixgbe_device* dev, int queue_id) {
 	// this has to be fixed if jumbo frames are to be supported
 	// mempool should be >= the number of rx and tx descriptors for a forwarding application
 	uint32_t mempool_size = NUM_RX_QUEUE_ENTRIES + NUM_TX_QUEUE_ENTRIES;
-	queue->mempool = memory_allocate_mempool(mempool_size < 4096 ? 4096 : mempool_size, 2048);
-	if (queue->num_entries & (queue->num_entries - 1)) {
-		error("number of queue entries must be a power of 2");
-	}
+
+	//queue->mempool = memory_allocate_mempool(mempool_size < 4096 ? 4096 : mempool_size, 2048);
+	queue->mempool = memory_allocate_mempool(mempool_size < 2048 ? 2048 : mempool_size, 2048);
+	
+	debug("qeue->num_entries: %d", queue->num_entries);
+	// if (queue->num_entries & (queue->num_entries - 1)) {
+	// 	error("number of queue entries must be a power of 2");
+	// }
+
+	debug("2");
+
 	for (int i = 0; i < queue->num_entries; i++) {
 		volatile union ixgbe_adv_rx_desc* rxd = queue->descriptors + i;
 		struct pkt_buf* buf = pkt_buf_alloc(queue->mempool);
@@ -78,21 +90,28 @@ static void start_rx_queue(struct ixgbe_device* dev, int queue_id) {
 		// we need to return the virtual address in the rx function which the descriptor doesn't know by default
 		queue->virtual_addresses[i] = buf;
 	}
+
+	debug("3");
 	// enable queue and wait if necessary
 	set_flags32(dev->addr, IXGBE_RXDCTL(queue_id), IXGBE_RXDCTL_ENABLE);
 	wait_set_reg32(dev->addr, IXGBE_RXDCTL(queue_id), IXGBE_RXDCTL_ENABLE);
+	debug("4");
 	// rx queue starts out full
 	set_reg32(dev->addr, IXGBE_RDH(queue_id), 0);
 	// was set to 0 before in the init function
 	set_reg32(dev->addr, IXGBE_RDT(queue_id), queue->num_entries - 1);
+	debug("5");
 }
 
 static void start_tx_queue(struct ixgbe_device* dev, int queue_id) {
 	debug("starting tx queue %d", queue_id);
 	struct ixgbe_tx_queue* queue = ((struct ixgbe_tx_queue*)(dev->tx_queues)) + queue_id;
-	if (queue->num_entries & (queue->num_entries - 1)) {
-		error("number of queue entries must be a power of 2");
-	}
+	
+	debug("qeue->num_entries: %d", queue->num_entries);
+	// if (queue->num_entries & (queue->num_entries - 1)) {
+	// 	error("number of queue entries must be a power of 2");
+	// }
+	
 	// tx queue starts out empty
 	set_reg32(dev->addr, IXGBE_TDH(queue_id), 0);
 	set_reg32(dev->addr, IXGBE_TDT(queue_id), 0);
@@ -282,22 +301,51 @@ struct ixy_device* ixgbe_init(const char* pci_addr, uint16_t rx_queues, uint16_t
 	if (tx_queues > MAX_QUEUES) {
 		error("cannot configure %d tx queues: limit is %d", tx_queues, MAX_QUEUES);
 	}
+	
+	debug("before ixgbe alloc");
 	struct ixgbe_device* dev = (struct ixgbe_device*) malloc(sizeof(struct ixgbe_device));
-	dev->ixy.pci_addr = strdup(pci_addr);
+	debug("finish ixgbe alloc");
+	
+	dev->ixy.pci_addr = virt_pci_addr;
 	dev->ixy.driver_name = driver_name;
 	dev->ixy.num_rx_queues = rx_queues;
 	dev->ixy.num_tx_queues = tx_queues;
+	
 	dev->ixy.rx_batch = ixgbe_rx_batch;
 	dev->ixy.tx_batch = ixgbe_tx_batch;
 	dev->ixy.read_stats = ixgbe_read_stats;
 	dev->ixy.set_promisc = ixgbe_set_promisc;
 	dev->ixy.get_link_speed = ixgbe_get_link_speed;
+	
+	debug("before pci_map_resource");
 	dev->addr = pci_map_resource(pci_addr);
+	debug("finish pci_map_resource");
+	
 	dev->rx_queues = calloc(rx_queues, sizeof(struct ixgbe_rx_queue) + sizeof(void*) * MAX_RX_QUEUE_ENTRIES);
 	dev->tx_queues = calloc(tx_queues, sizeof(struct ixgbe_tx_queue) + sizeof(void*) * MAX_TX_QUEUE_ENTRIES);
+	
+	debug("before reset_and_init");
 	reset_and_init(dev);
+	debug("finish reset_and_init");
+	
 	return &dev->ixy;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 uint32_t ixgbe_get_link_speed(const struct ixy_device* ixy) {
 	struct ixgbe_device* dev = IXY_TO_IXGBE(ixy);

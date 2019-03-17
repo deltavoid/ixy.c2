@@ -66,13 +66,17 @@ static struct mempool* init_mempool() {
 }
 
 int main(int argc, char* argv[]) {
-	if (argc != 2) {
-		printf("Usage: %s <pci bus id>\n", argv[0]);
-		return 1;
-	}
+	// if (argc != 2) {
+	// 	printf("Usage: %s <pci bus id>\n", argv[0]);
+	// 	return 1;
+	// }
+	debug("start in main");
 
 	struct mempool* mempool = init_mempool();
+	debug("finish mempool_init");
+
 	struct ixy_device* dev = ixy_init(argv[1], 1, 1);
+	debug("finish ixgbe_init");
 
 	uint64_t last_stats_printed = monotonic_time();
 	uint64_t counter = 0;
@@ -83,6 +87,9 @@ int main(int argc, char* argv[]) {
 
 	// array of bufs sent out in a batch
 	struct pkt_buf* bufs[BATCH_SIZE];
+
+	debug("finish init in main");
+	while (true);
 
 	// tx loop
 	while (true) {
