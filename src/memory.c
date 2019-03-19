@@ -33,7 +33,7 @@ static uintptr_t virt_to_phys(void* virt) {
 	long phys_page = syscall(997, virt_page);
 
 	long phys = phys_page | ((long)virt & page_mask);
-	info("trans virt 0x%012lX to phys 0x%012lX", virt, phys);
+	//info("trans virt 0x%012lX to phys 0x%012lX", virt, phys);
 	return phys;
 }
 

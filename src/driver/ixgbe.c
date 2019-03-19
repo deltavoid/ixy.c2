@@ -10,7 +10,7 @@
 #include "driver/device.h"
 #include "ixgbe_type.h"
 
-const char* virt_pci_addr = "0000";
+const char* virt_pci_addr = "0000:00:00.0";
 const char* driver_name = "ixy-ixgbe";
 
 // const int MAX_RX_QUEUE_ENTRIES = 4096;
@@ -229,7 +229,7 @@ static void init_tx(struct ixgbe_device* dev) {
 
 static void wait_for_link(const struct ixgbe_device* dev) {
 	info("Waiting for link...");
-	int32_t max_wait = 10000000; // 10 seconds in us
+	int32_t max_wait = 10000000 * 2; // 10 seconds in us
 	uint32_t poll_interval = 100000; // 10 ms in us
 	uint32_t speed;
 	while (!(speed = ixgbe_get_link_speed(&dev->ixy)) && max_wait > 0) {
@@ -249,7 +249,8 @@ static void reset_and_init(struct ixgbe_device* dev) {
 	// section 4.6.3.2
 	set_reg32(dev->addr, IXGBE_CTRL, IXGBE_CTRL_RST_MASK);
 	wait_clear_reg32(dev->addr, IXGBE_CTRL, IXGBE_CTRL_RST_MASK);
-	usleep(10000);
+	//usleep(10000);
+	usleep(100000);
 
 	// section 4.6.3.1 - disable interrupts again after reset
 	set_reg32(dev->addr, IXGBE_EIMC, 0x7FFFFFFF);
@@ -264,6 +265,7 @@ static void reset_and_init(struct ixgbe_device* dev) {
 
 	// section 4.6.4 - initialize link (auto negotiation)
 	init_link(dev);
+	usleep(10000);
 
 	// section 4.6.5 - statistical counters
 	// reset-on-read registers, just read them once
@@ -287,6 +289,7 @@ static void reset_and_init(struct ixgbe_device* dev) {
 	// finally, enable promisc mode by default, it makes testing less annoying
 	ixgbe_set_promisc(&dev->ixy, true);
 
+    usleep(100000);
 	// wait for some time for the link to come up
 	wait_for_link(dev);
 }
@@ -306,7 +309,7 @@ struct ixy_device* ixgbe_init(const char* pci_addr, uint16_t rx_queues, uint16_t
 	struct ixgbe_device* dev = (struct ixgbe_device*) malloc(sizeof(struct ixgbe_device));
 	debug("finish ixgbe alloc");
 	
-	dev->ixy.pci_addr = virt_pci_addr;
+	dev->ixy.pci_addr = strdup(virt_pci_addr);
 	dev->ixy.driver_name = driver_name;
 	dev->ixy.num_rx_queues = rx_queues;
 	dev->ixy.num_tx_queues = tx_queues;
