@@ -1,0 +1,6 @@
+*.o
+bin/ixy-fwd
+bin/ixy-pktgen
+
+.vscode
+Makefile.dep

@@ -1,26 +1,27 @@
 
 
-NIC     ?= 0000:00:08.0
+NIC     ?= 0000:02:00.0
 
-CC      := /usr/bin/cc
-#CC      := x86_64-linux-musl-gcc 
+CC      := /usr/bin/cc 
 CFLAGS  := -g -O2 -march=native -fomit-frame-pointer -std=c11 -D_XOPEN_SOURCE=700 -D_DEFAULT_SOURCE -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -Wformat=2 -std=gnu11 -I src
 LDFLAGS := -static
 
 
 
-SRC_DRIVER := device.c ixgbe.c virtio.c
-COMMON_SRC := $(addprefix driver/,$(SRC_DRIVER)) memory.c pci.c stats.c
-COMMON_SRC := $(addprefix src/,$(COMMON_SRC))
+SRC_DIR     := src src/driver
+COMMON_SRCS := $(wildcard $(addsuffix /*.c, $(SRC_DIR)))
 
-SRCS             := $(COMMON_SRC) src/app/ixy-pktgen.c src/app/ixy-fwd.c
-IXY_PKTGEN_SRCS  := $(COMMON_SRC) src/app/ixy-pktgen.c
-IXY_FORWARD_SRCS := $(COMMON_SRC) src/app/ixy-fwd.c
+SRCS             := $(COMMON_SRCS) $(wildcard src/app/*.c)
+OBJS             := $(patsubst %.c,%.o,$(SRCS))
 
 
-IXY_PKTGEN_NAME  := ixy-pktgen
+
+IXY_PKTGEN_NAME  := bin/ixy-pktgen
+IXY_PKTGEN_SRCS  := $(COMMON_SRCS) src/app/ixy-pktgen.c
 IXY_PKTGEN_OBJS  := $(patsubst %.c,%.o,$(IXY_PKTGEN_SRCS))
-IXY_FORWARD_NAME := ixy-fwd
+
+IXY_FORWARD_NAME := bin/ixy-fwd
+IXY_FORWARD_SRCS := $(COMMON_SRCS) src/app/ixy-fwd.c
 IXY_FORWARD_OBJS := $(patsubst %.c,%.o,$(IXY_FORWARD_SRCS))
 
 
@@ -32,17 +33,17 @@ build: $(IXY_PKTGEN_NAME) $(IXY_FORWARD_NAME)
 
 
 $(IXY_PKTGEN_NAME): $(IXY_PKTGEN_OBJS)
-	echo $(SRCS)
-	echo $(COMMON_SRC)
-	echo $(IXY_PKTGEN_OBJS)
+	@echo IXY_PKTGEN_SRCS: $(IXY_PKTGEN_SRCS)
 	$(CC) -o $@ $^ $(LDFLAGS)
 
 $(IXY_FORWARD_NAME): $(IXY_FORWARD_OBJS)
 	$(CC) -o $@ $^ $(LDFLAGS)
 
 include Makefile.dep
-Makefile.dep: $(SRC)
+Makefile.dep: $(SRCS)
+	@echo SRCS: $(SRCS)
 	$(CC) $(CFLAGS) -MM $^ > $@
+	-mkdir bin
 
 .c.o:
 	$(CC) $(CFLAGS) -o $@ -c $<
@@ -54,4 +55,4 @@ run: build
 
 
 clean:
-	rm $(patsubst %.c, %.o, $(SRCS))  $(IXY_PKTGEN_NAME) $(IXY_FORWARD_NAME)
+	rm $(OBJS)  $(IXY_PKTGEN_NAME) $(IXY_FORWARD_NAME) Makefile.dep
