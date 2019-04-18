@@ -72,7 +72,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	struct mempool* mempool = init_mempool();
-	struct ixy_device* dev = ixy_init(argv[1], 1, 1);
+	struct ixy_device* dev = ixy_init(argv[1], 4, 4);
 
 	uint64_t last_stats_printed = monotonic_time();
 	uint64_t counter = 0;
@@ -94,7 +94,7 @@ int main(int argc, char* argv[]) {
 			*(uint32_t*)(bufs[i]->data + PKT_SIZE - 4) = seq_num++;
 		}
 		// the packets could be modified here to generate multiple flows
-		ixy_tx_batch_busy_wait(dev, 0, bufs, BATCH_SIZE);
+		ixy_tx_batch_busy_wait(dev, counter & 0x3, bufs, BATCH_SIZE);
 
 		// don't check time for every packet, this yields +10% performance :)
 		if ((counter++ & 0xFFF) == 0) {

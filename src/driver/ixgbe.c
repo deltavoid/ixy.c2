@@ -12,8 +12,10 @@
 
 const char* driver_name = "ixy-ixgbe";
 
-const int MAX_RX_QUEUE_ENTRIES = 4096;
-const int MAX_TX_QUEUE_ENTRIES = 4096;
+// const int MAX_RX_QUEUE_ENTRIES = 4096;
+// const int MAX_TX_QUEUE_ENTRIES = 4096;
+#define MAX_RX_QUEUE_ENTRIES  4096
+#define MAX_TX_QUEUE_ENTRIES  4096
 
 const int NUM_RX_QUEUE_ENTRIES = 512;
 const int NUM_TX_QUEUE_ENTRIES = 512;
@@ -28,7 +30,7 @@ struct ixgbe_rx_queue {
 	// position we are reading from
 	uint16_t rx_index;
 	// virtual addresses to map descriptors back to their mbuf for freeing
-	void* virtual_addresses[];
+	void* virtual_addresses[MAX_RX_QUEUE_ENTRIES];
 };
 
 // allocated for each tx queue, keeps state for the transmit function
@@ -40,7 +42,7 @@ struct ixgbe_tx_queue {
 	// position to insert packets for transmission
 	uint16_t tx_index;
 	// virtual addresses to map descriptors back to their mbuf for freeing
-	void* virtual_addresses[];
+	void* virtual_addresses[MAX_TX_QUEUE_ENTRIES];
 };
 
 // see section 4.6.4
@@ -64,6 +66,8 @@ static void start_rx_queue(struct ixgbe_device* dev, int queue_id) {
 	// mempool should be >= the number of rx and tx descriptors for a forwarding application
 	uint32_t mempool_size = NUM_RX_QUEUE_ENTRIES + NUM_TX_QUEUE_ENTRIES;
 	queue->mempool = memory_allocate_mempool(mempool_size < 4096 ? 4096 : mempool_size, 2048);
+
+	debug("que num_entries: %d", queue->num_entries);
 	if (queue->num_entries & (queue->num_entries - 1)) {
 		error("number of queue entries must be a power of 2");
 	}
@@ -144,6 +148,7 @@ static void init_rx(struct ixgbe_device* dev) {
 		// private data for the driver, 0-initialized
 		struct ixgbe_rx_queue* queue = ((struct ixgbe_rx_queue*)(dev->rx_queues)) + i;
 		queue->num_entries = NUM_RX_QUEUE_ENTRIES;
+		debug("queue->num_entries:%d", queue->num_entries);
 		queue->rx_index = 0;
 		queue->descriptors = (union ixgbe_adv_rx_desc*) mem.virt;
 	}
@@ -293,8 +298,12 @@ struct ixy_device* ixgbe_init(const char* pci_addr, uint16_t rx_queues, uint16_t
 	dev->ixy.set_promisc = ixgbe_set_promisc;
 	dev->ixy.get_link_speed = ixgbe_get_link_speed;
 	dev->addr = pci_map_resource(pci_addr);
-	dev->rx_queues = calloc(rx_queues, sizeof(struct ixgbe_rx_queue) + sizeof(void*) * MAX_RX_QUEUE_ENTRIES);
-	dev->tx_queues = calloc(tx_queues, sizeof(struct ixgbe_tx_queue) + sizeof(void*) * MAX_TX_QUEUE_ENTRIES);
+	debug("rxques:%d txques:%d", rx_queues, tx_queues);
+	//dev->rx_queues = calloc(rx_queues, sizeof(struct ixgbe_rx_queue) + sizeof(void*) * MAX_RX_QUEUE_ENTRIES);
+	//dev->tx_queues = calloc(tx_queues, sizeof(struct ixgbe_tx_queue) + sizeof(void*) * MAX_TX_QUEUE_ENTRIES);
+	dev->rx_queues = calloc(rx_queues, sizeof(struct ixgbe_rx_queue) );
+	dev->tx_queues = calloc(tx_queues, sizeof(struct ixgbe_tx_queue) );
+	
 	reset_and_init(dev);
 	return &dev->ixy;
 }
