@@ -16,6 +16,7 @@ static const uint8_t pkt_data[] = {
 	0x01, 0x02, 0x03, 0x04, 0x05, 0x06, // dst MAC
 	0x11, 0x12, 0x13, 0x14, 0x15, 0x16, // src MAC
 	0x08, 0x00,                         // ether type: IPv4
+	
 	0x45, 0x00,                         // Version, IHL, TOS
 	(PKT_SIZE - 14) >> 8,               // ip len excluding ethernet, high byte
 	(PKT_SIZE - 14) & 0xFF,             // ip len exlucding ethernet, low byte
@@ -23,6 +24,7 @@ static const uint8_t pkt_data[] = {
 	0x40, 0x11, 0x00, 0x00,             // TTL (64), protocol (UDP), checksum
 	0x0A, 0x00, 0x00, 0x01,             // src ip (10.0.0.1)
 	0x0A, 0x00, 0x00, 0x02,             // dst ip (10.0.0.2)
+	
 	0x00, 0x2A, 0x05, 0x39,             // src and dst ports (42 -> 1337)
 	(PKT_SIZE - 20 - 14) >> 8,          // udp len excluding ip & ethernet, high byte
 	(PKT_SIZE - 20 - 14) & 0xFF,        // udp len exlucding ip & ethernet, low byte
@@ -72,7 +74,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	struct mempool* mempool = init_mempool();
-	struct ixy_device* dev = ixy_init(argv[1], 4, 4);
+	struct ixy_device* dev = ixy_init(argv[1], 8, 8);
 
 	uint64_t last_stats_printed = monotonic_time();
 	uint64_t counter = 0;

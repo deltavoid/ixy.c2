@@ -1,6 +1,7 @@
 
 
 NIC     ?= 0000:02:00.0
+NIC1    ?= 0000:02:00.1
 
 CC      := /usr/bin/cc 
 CFLAGS  := -g -O2 -march=native -fomit-frame-pointer -std=c11 -D_XOPEN_SOURCE=700 -D_DEFAULT_SOURCE -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -Wformat=2 -std=gnu11 -I src
@@ -24,12 +25,16 @@ IXY_FORWARD_NAME := bin/ixy-fwd
 IXY_FORWARD_SRCS := $(COMMON_SRCS) src/app/ixy-fwd.c
 IXY_FORWARD_OBJS := $(patsubst %.c,%.o,$(IXY_FORWARD_SRCS))
 
+IXY_LOOP_NAME := bin/ixy-loop
+IXY_LOOP_SRCS := $(COMMON_SRCS) src/app/ixy-loop.c
+IXY_LOOP_OBJS := $(patsubst %.c,%.o,$(IXY_LOOP_SRCS))
+
 
 
 .PHONY: all build run clean
 all: run
 
-build: $(IXY_PKTGEN_NAME) $(IXY_FORWARD_NAME)
+build: $(IXY_PKTGEN_NAME) $(IXY_FORWARD_NAME) $(IXY_LOOP_NAME)
 
 
 $(IXY_PKTGEN_NAME): $(IXY_PKTGEN_OBJS)
@@ -37,6 +42,9 @@ $(IXY_PKTGEN_NAME): $(IXY_PKTGEN_OBJS)
 	$(CC) -o $@ $^ $(LDFLAGS)
 
 $(IXY_FORWARD_NAME): $(IXY_FORWARD_OBJS)
+	$(CC) -o $@ $^ $(LDFLAGS)
+
+$(IXY_LOOP_NAME): $(IXY_LOOP_OBJS)
 	$(CC) -o $@ $^ $(LDFLAGS)
 
 include Makefile.dep
@@ -51,8 +59,9 @@ Makefile.dep: $(SRCS)
 
 run: build
 #	sudo ../setup-hugetlbfs.sh
-	sudo ./$(IXY_PKTGEN_NAME) $(NIC)
+#	sudo ./$(IXY_PKTGEN_NAME) $(NIC)
+	sudo ./$(IXY_LOOP_NAME) $(NIC) $(NIC1)
 
 
 clean:
-	rm $(OBJS)  $(IXY_PKTGEN_NAME) $(IXY_FORWARD_NAME) Makefile.dep
+	rm $(OBJS)  $(IXY_PKTGEN_NAME) $(IXY_FORWARD_NAME) $(IXY_LOOP_NAME) Makefile.dep

@@ -9,7 +9,7 @@
 
 #define HUGE_PAGE_BITS 21
 #define HUGE_PAGE_SIZE (1 << HUGE_PAGE_BITS)
-#define SIZE_PKT_BUF_HEADROOM 40
+#define SIZE_PKT_BUF_HEADROOM 40 - 4
 
 struct pkt_buf {
 	// physical address to pass a buffer to a nic
@@ -17,6 +17,7 @@ struct pkt_buf {
 	struct mempool* mempool;
 	uint32_t mempool_idx;
 	uint32_t size;
+	uint32_t hash;
 	uint8_t head_room[SIZE_PKT_BUF_HEADROOM];
 	uint8_t data[] __attribute__((aligned(64)));
 };

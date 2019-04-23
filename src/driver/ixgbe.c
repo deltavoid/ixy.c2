@@ -225,6 +225,75 @@ static void wait_for_link(const struct ixgbe_device* dev) {
 	info("Link speed is %d Mbit/s", ixgbe_get_link_speed(&dev->ixy));
 }
 
+/*
+ * RSS random key supplied in section 7.1.2.8.3 of the Intel 82599 datasheet.
+ * Used as the default key.
+ */
+static uint8_t rss_intel_key[40] = {
+	0x6D, 0x5A, 0x56, 0xDA, 0x25, 0x5B, 0x0E, 0xC2,
+	0x41, 0x67, 0x25, 0x3D, 0x43, 0xA3, 0x8F, 0xB0,
+	0xD0, 0xCA, 0x2B, 0xCB, 0xAE, 0x7B, 0x30, 0xB4,
+	0x77, 0xCB, 0x2D, 0xA3, 0x80, 0x30, 0xF2, 0x0C,
+	0x6A, 0x42, 0xB7, 0x3B, 0xBE, 0xAC, 0x01, 0xFA,
+};
+
+
+// things needs to do
+// MRQC register  8.2.3.7.12
+// RSSRK
+// redirection table  8.2.3.7.15
+static void init_rss(struct ixgbe_device* dev)
+{
+    // set redirection table
+	// num_rx_queues needs to be 2^n, otherwise the val below error, it needs num_rx_queues to be mask.
+	// RSS support max 16 rx queues.
+	unsigned int num_rx_queues = dev->ixy.num_rx_queues;
+	unsigned int mask = num_rx_queues - 1;
+	debug("RETA mask: %x", mask);
+
+	
+	for (int i = 0; i < 32; i++)
+	{   unsigned int val = 0;
+		for (int j = 0; j < 4; j++)
+		    val |= j << (j * 8);
+		    //val |= ((i * 4 + j) & mask) << (j * 8);
+
+		set_reg32(dev->addr, IXGBE_RETA(i), val);
+	}
+
+    // set RSSRK
+		for (int i = 0; i < 10; i++) {
+		    unsigned int rss_key = 0;
+			rss_key  = rss_intel_key[(i * 4)];
+			rss_key |= rss_intel_key[(i * 4) + 1] << 8;
+			rss_key |= rss_intel_key[(i * 4) + 2] << 16;
+			rss_key |= rss_intel_key[(i * 4) + 3] << 24;
+			set_reg32(dev->addr, IXGBE_RSSRK(i), rss_key);
+		}
+
+
+	// set MRQC register to RSS only
+	// enable hash funciton of IPv4TCP and IPv4
+    set_reg32(dev->addr, IXGBE_MRQC, IXGBE_MRQC_RSSEN | 
+	                                 /*IXGBE_MRQC_RSS_FIELD_IPV4_TCP | 
+									 IXGBE_MRQC_RSS_FIELD_IPV4_UDP | */
+									 IXGBE_MRQC_RSS_FIELD_IPV4);
+	
+	for (int i = 0; i < 32; i++)
+	{   unsigned int val = get_reg32(dev->addr, IXGBE_RETA(i));
+	    debug("RETA [%d]: %x", i, val);
+	}
+	
+    unsigned int MRQC = get_reg32(dev->addr, IXGBE_MRQC);
+	debug("MRQC: %x", MRQC);
+
+	for (int i = 0; i < 10; i++)
+	{   unsigned int val = get_reg32(dev->addr, IXGBE_RSSRK(i));
+	    debug("RSSRK[%d]: %x", i, val);
+	}
+
+}
+
 
 // see section 4.6.3
 static void reset_and_init(struct ixgbe_device* dev) {
@@ -248,6 +317,10 @@ static void reset_and_init(struct ixgbe_device* dev) {
 	// section 4.6.3 - Wait for DMA initialization done (RDRXCTL.DMAIDONE)
 	wait_set_reg32(dev->addr, IXGBE_RDRXCTL, IXGBE_RDRXCTL_DMAIDONE);
 
+    // this may need explict set
+	if  (dev->ixy.num_rx_queues > 1)
+        init_rss(dev);
+
 	// section 4.6.4 - initialize link (auto negotiation)
 	init_link(dev);
 
@@ -255,11 +328,15 @@ static void reset_and_init(struct ixgbe_device* dev) {
 	// reset-on-read registers, just read them once
 	ixgbe_read_stats(&dev->ixy, NULL);
 
+
+
 	// section 4.6.7 - init rx
 	init_rx(dev);
 
 	// section 4.6.8 - init tx
 	init_tx(dev);
+
+	
 
 	// enables queues after initializing everything
 	for (uint16_t i = 0; i < dev->ixy.num_rx_queues; i++) {
@@ -287,18 +364,24 @@ struct ixy_device* ixgbe_init(const char* pci_addr, uint16_t rx_queues, uint16_t
 	if (tx_queues > MAX_QUEUES) {
 		error("cannot configure %d tx queues: limit is %d", tx_queues, MAX_QUEUES);
 	}
+	
 	struct ixgbe_device* dev = (struct ixgbe_device*) malloc(sizeof(struct ixgbe_device));
+	
 	dev->ixy.pci_addr = strdup(pci_addr);
 	dev->ixy.driver_name = driver_name;
 	dev->ixy.num_rx_queues = rx_queues;
 	dev->ixy.num_tx_queues = tx_queues;
+	
 	dev->ixy.rx_batch = ixgbe_rx_batch;
 	dev->ixy.tx_batch = ixgbe_tx_batch;
 	dev->ixy.read_stats = ixgbe_read_stats;
 	dev->ixy.set_promisc = ixgbe_set_promisc;
 	dev->ixy.get_link_speed = ixgbe_get_link_speed;
+	
 	dev->addr = pci_map_resource(pci_addr);
+	
 	debug("rxques:%d txques:%d", rx_queues, tx_queues);
+	
 	//dev->rx_queues = calloc(rx_queues, sizeof(struct ixgbe_rx_queue) + sizeof(void*) * MAX_RX_QUEUE_ENTRIES);
 	//dev->tx_queues = calloc(tx_queues, sizeof(struct ixgbe_tx_queue) + sizeof(void*) * MAX_TX_QUEUE_ENTRIES);
 	dev->rx_queues = calloc(rx_queues, sizeof(struct ixgbe_rx_queue) );
@@ -379,6 +462,8 @@ uint32_t ixgbe_rx_batch(struct ixy_device* ixy, uint16_t queue_id, struct pkt_bu
 			union ixgbe_adv_rx_desc desc = *desc_ptr;
 			struct pkt_buf* buf = (struct pkt_buf*) queue->virtual_addresses[rx_index];
 			buf->size = desc.wb.upper.length;
+			buf->hash = desc.wb.lower.hi_dword.rss;
+
 			// this would be the place to implement RX offloading by translating the device-specific flags
 			// to an independent representation in the buf (similiar to how DPDK works)
 			// need a new mbuf for the descriptor
