@@ -10,7 +10,7 @@
 
 // number of packets sent simultaneously to our driver
 //static const uint32_t BATCH_SIZE = 64;
-#define BATCH_SIZE 4
+#define BATCH_SIZE 16
 
 // excluding CRC (offloaded by default)
 #define PKT_SIZE 60
@@ -59,6 +59,8 @@ static struct mempool* init_mempool() {
 		struct pkt_buf* buf = pkt_buf_alloc(mempool);
 		buf->size = PKT_SIZE;
 		memcpy(buf->data, pkt_data, sizeof(pkt_data));
+		buf->data[14 + 20 - 1] = buf_id & 0xff;  // dst ip
+
 		*(uint16_t*) (buf->data + 24) = calc_ip_checksum(buf->data + 14, 20);
 		bufs[buf_id] = buf;
 	}
@@ -140,11 +142,11 @@ static struct mempool* init_mempool() {
 static void show_pkt(struct pkt_buf* pkb)
 {
 	printf("len: %u  hash: %x\n", pkb->size, pkb->hash);
-    // for (unsigned int i = 0; i < pkb->size; i++)
-    // {   printf("%x ", pkb->data[i]);
-    //     if  (i % 4 == 3)  printf("\n");
-    // }
-    // printf("\n");
+    for (unsigned int i = 0; i < pkb->size; i++)
+    {   printf("%x ", pkb->data[i]);
+        if  (i % 4 == 3)  printf("\n");
+    }
+    printf("\n");
 }
 
 int main(int argc, char* argv[]) {
@@ -168,6 +170,7 @@ int main(int argc, char* argv[]) {
 
     uint32_t seq_num = 0;
 
+
 	// uint64_t last_stats_printed = monotonic_time();
 	// struct device_stats stats1, stats1_old;
 	// struct device_stats stats2, stats2_old;
@@ -176,7 +179,7 @@ int main(int argc, char* argv[]) {
 	// stats_init(&stats2, dev2);
 	// stats_init(&stats2_old, dev2);
 
-	// uint64_t counter = 0;
+	uint64_t counter = 0;
 	// while (true) {
 	// 	forward(dev1, 0, dev2, 0);
 	// 	forward(dev2, 0, dev1, 0);
@@ -202,6 +205,7 @@ int main(int argc, char* argv[]) {
 
     while (true)
     {
+		printf("%d\n", counter++);
         //tx
 		// we cannot immediately recycle packets, we need to allocate new packets every time
 		// the old packets might still be used by the NIC: tx is async
@@ -219,9 +223,11 @@ int main(int argc, char* argv[]) {
         for (int i = 0; i < 4; i++)
         {
             uint32_t num_rx = ixy_rx_batch(dev2, i, rx_bufs, BATCH_SIZE);
-            printf("queue %d:\n", i);
-            for (unsigned int j = 0; j < num_rx; j++)
-            {   show_pkt(rx_bufs[i]);
+            printf("queue %d, num_rx: %d\n", i, num_rx);
+            
+			for (unsigned int j = 0; j < num_rx; j++)
+            {   printf("j:%d\n", j);
+				show_pkt(rx_bufs[i]);
                 pkt_buf_free(rx_bufs[i]);
             }
         }

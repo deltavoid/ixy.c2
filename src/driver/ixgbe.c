@@ -252,6 +252,7 @@ static void init_rss(struct ixgbe_device* dev)
 	debug("RETA mask: %x", mask);
 
 	
+	// 8 rx queues have bugs, [5, 7] queues could not work.
 	for (int i = 0; i < 32; i++)
 	{   unsigned int val = 0;
 		for (int j = 0; j < 4; j++)
