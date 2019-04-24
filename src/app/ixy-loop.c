@@ -227,8 +227,8 @@ int main(int argc, char* argv[]) {
             
 			for (unsigned int j = 0; j < num_rx; j++)
             {   printf("j:%d\n", j);
-				show_pkt(rx_bufs[i]);
-                pkt_buf_free(rx_bufs[i]);
+				show_pkt(rx_bufs[j]);
+                pkt_buf_free(rx_bufs[j]);
             }
         }
 
