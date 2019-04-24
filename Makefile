@@ -29,12 +29,16 @@ IXY_LOOP_NAME := bin/ixy-loop
 IXY_LOOP_SRCS := $(COMMON_SRCS) src/app/ixy-loop.c
 IXY_LOOP_OBJS := $(patsubst %.c,%.o,$(IXY_LOOP_SRCS))
 
+IXY_RECVER_NAME := bin/ixy-recver
+IXY_RECVER_SRCS := $(COMMON_SRCS) src/app/ixy-recver.c
+IXY_RECVER_OBJS := $(patsubst %.c,%.o,$(IXY_RECVER_SRCS))
+
 
 
 .PHONY: all build run clean
 all: run
 
-build: $(IXY_PKTGEN_NAME) $(IXY_FORWARD_NAME) $(IXY_LOOP_NAME)
+build: $(IXY_PKTGEN_NAME) $(IXY_FORWARD_NAME) $(IXY_LOOP_NAME) $(IXY_RECVER_NAME)
 
 
 $(IXY_PKTGEN_NAME): $(IXY_PKTGEN_OBJS)
@@ -46,6 +50,10 @@ $(IXY_FORWARD_NAME): $(IXY_FORWARD_OBJS)
 
 $(IXY_LOOP_NAME): $(IXY_LOOP_OBJS)
 	$(CC) -o $@ $^ $(LDFLAGS)
+
+$(IXY_RECVER_NAME): $(IXY_RECVER_OBJS)
+	$(CC) -o $@ $^ $(LDFLAGS)
+
 
 include Makefile.dep
 Makefile.dep: $(SRCS)

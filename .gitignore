@@ -2,6 +2,7 @@
 bin/ixy-fwd
 bin/ixy-pktgen
 bin/ixy-loop
+bin/ixy-recver
 
 .vscode
 .idea
