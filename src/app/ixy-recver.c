@@ -89,13 +89,16 @@ int main(int argc, char* argv[]) {
 		return 1;
 	}
 
-    int num_queues = 4;
+    int num_queues = 8;
     struct ixy_device* dev = ixy_init(argv[1], num_queues, num_queues);
     struct pkt_buf* rx_bufs[BATCH_SIZE];
 
+	uint64_t counter = 0;
+
     while (true)
     {
-        usleep(1000);
+        usleep(1000000);
+		printf("counter: %llu\n", counter++);
 
         for (unsigned i = 0; i < num_queues; i++)
         {
