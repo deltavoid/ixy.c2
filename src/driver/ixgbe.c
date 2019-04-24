@@ -256,8 +256,8 @@ static void init_rss(struct ixgbe_device* dev)
 	for (int i = 0; i < 32; i++)
 	{   unsigned int val = 0;
 		for (int j = 0; j < 4; j++)
-		    val |= j << (j * 8);
-		    //val |= ((i * 4 + j) & mask) << (j * 8);
+		    //val |= j << (j * 8);
+		    val |= ((i * 4 + j) & mask) << (j * 8);
 
 		set_reg32(dev->addr, IXGBE_RETA(i), val);
 	}
@@ -276,8 +276,8 @@ static void init_rss(struct ixgbe_device* dev)
 	// set MRQC register to RSS only
 	// enable hash funciton of IPv4TCP and IPv4
     set_reg32(dev->addr, IXGBE_MRQC, IXGBE_MRQC_RSSEN | 
-	                                 /*IXGBE_MRQC_RSS_FIELD_IPV4_TCP | 
-									 IXGBE_MRQC_RSS_FIELD_IPV4_UDP | */
+	                                 IXGBE_MRQC_RSS_FIELD_IPV4_TCP | 
+									 IXGBE_MRQC_RSS_FIELD_IPV4_UDP | 
 									 IXGBE_MRQC_RSS_FIELD_IPV4);
 	
 	for (int i = 0; i < 32; i++)
