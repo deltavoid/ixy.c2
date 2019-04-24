@@ -59,8 +59,8 @@ static struct mempool* init_mempool() {
 		struct pkt_buf* buf = pkt_buf_alloc(mempool);
 		buf->size = PKT_SIZE;
 		memcpy(buf->data, pkt_data, sizeof(pkt_data));
-		buf->data[14 + 20 - 1] = buf_id & 0xff;  // dst ip
-
+		//buf->data[14 + 20 - 1] = buf_id & 0xff;  // dst ip
+        buf->data[14 + 20 - 1] = buf_id & 0x2f;  // dst ip
 		*(uint16_t*) (buf->data + 24) = calc_ip_checksum(buf->data + 14, 20);
 		bufs[buf_id] = buf;
 	}
@@ -159,10 +159,11 @@ int main(int argc, char* argv[]) {
 
     struct mempool* mempool = init_mempool();
 
+    uint32_t num_queues = 8;
     //tx dev
 	struct ixy_device* dev1 = ixy_init(argv[1], 1, 1);
 	//rx dev
-    struct ixy_device* dev2 = ixy_init(argv[2], 4, 4);
+    struct ixy_device* dev2 = ixy_init(argv[2], num_queues, num_queues);
 
 
     struct pkt_buf* tx_bufs[BATCH_SIZE];
@@ -220,15 +221,15 @@ int main(int argc, char* argv[]) {
 
         usleep(1000000);
         //rx
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < num_queues; i++)
         {
             uint32_t num_rx = ixy_rx_batch(dev2, i, rx_bufs, BATCH_SIZE);
             printf("queue %d, num_rx: %d\n", i, num_rx);
             
 			for (unsigned int j = 0; j < num_rx; j++)
             {   printf("j:%d\n", j);
-				show_pkt(rx_bufs[i]);
-                pkt_buf_free(rx_bufs[i]);
+				show_pkt(rx_bufs[j]);
+                pkt_buf_free(rx_bufs[j]);
             }
         }
 

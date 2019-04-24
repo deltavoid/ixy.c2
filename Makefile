@@ -68,8 +68,8 @@ Makefile.dep: $(SRCS)
 run: build
 #	sudo ../setup-hugetlbfs.sh
 #	sudo ./$(IXY_PKTGEN_NAME) $(NIC)
-#	sudo ./$(IXY_LOOP_NAME) $(NIC) $(NIC1)
-	sudo ./$(IXY_RECVER_NAME) $(NIC);
+	sudo ./$(IXY_LOOP_NAME) $(NIC) $(NIC1)
+#	sudo ./$(IXY_RECVER_NAME) $(NIC);
 
 
 clean:
